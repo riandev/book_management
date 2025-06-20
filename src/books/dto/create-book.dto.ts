@@ -28,9 +28,9 @@ export class CreateBookDto {
   @IsString()
   title: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsISBN()
-  isbn: string;
+  isbn?: string;
 
   @IsOptional()
   @IsDateString()
