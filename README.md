@@ -128,3 +128,14 @@ $ npm run test:e2e
 # Test coverage
 $ npm run test:cov
 ```
+
+## API Testing with Postman
+
+A Postman collection is included in the `/postman` directory for easy API testing. To use it:
+
+1. Install [Postman](https://www.postman.com/downloads/)
+2. Import the collection file: `postman/book_management.postman_collection.json`
+3. Start the application using `npm run start:dev`
+4. Test the API endpoints directly from Postman
+
+The collection includes all available endpoints for both Authors and Books resources, making it easy to test the full functionality of the API.
