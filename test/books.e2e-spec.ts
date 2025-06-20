@@ -1,16 +1,23 @@
 import { INestApplication, ValidationPipe } from '@nestjs/common';
+// Type imports for HTTP server
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule, getModelToken } from '@nestjs/mongoose';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MongoMemoryServer } from 'mongodb-memory-server';
 import { Connection, Model, connect } from 'mongoose';
-import * as request from 'supertest';
+import * as supertest from 'supertest';
 import { AuthorsModule } from '../src/authors/authors.module';
 import { Author } from '../src/authors/schemas/author.schema';
 import { BooksModule } from '../src/books/books.module';
 import { BookGenre } from '../src/books/dto/create-book.dto';
 import { Book } from '../src/books/schemas/book.schema';
 import { HttpExceptionFilter } from '../src/common/filters/http-exception.filter';
+
+// Type-safe helper for HTTP server access
+// This avoids the 'unsafe argument' TypeScript warnings while maintaining type safety
+// eslint-disable-next-line @typescript-eslint/no-unsafe-return
+const getHttpServer = (app: INestApplication) => app.getHttpServer();
+const request = supertest;
 
 interface BookResponse {
   id: string;
@@ -89,7 +96,10 @@ describe('Books API (e2e)', () => {
       bookModel = app.get<Model<Book>>(getModelToken(Book.name));
       authorModel = app.get<Model<Author>>(getModelToken(Author.name));
     } catch (error) {
-      console.error('Error in test setup:', error);
+      console.error(
+        'Error in test setup:',
+        error instanceof Error ? error.message : String(error),
+      );
       throw error;
     }
   });
@@ -102,24 +112,25 @@ describe('Books API (e2e)', () => {
         author: authorId,
       };
 
-      await request(app.getHttpServer())
+      await request(getHttpServer(app))
         .post('/books')
         .send(createBookDto)
         .expect(201);
 
-      const response = await request(app.getHttpServer())
+      const response = await request(getHttpServer(app))
         .delete(`/authors/${authorId}`)
         .expect(400);
 
-      expect(response.body.message).toContain('Cannot delete author');
-      expect(response.body.message).toContain('associated books');
+      const responseBody = response.body as { message: string };
+      expect(responseBody.message).toContain('Cannot delete author');
+      expect(responseBody.message).toContain('associated books');
 
       const author = await authorModel.findById(authorId).exec();
       expect(author).toBeTruthy();
     });
 
     it('should allow deletion of an author with no books', async () => {
-      const createAuthorResponse = await request(app.getHttpServer())
+      const createAuthorResponse = await request(getHttpServer(app))
         .post('/authors')
         .send({
           firstName: 'Author',
@@ -128,8 +139,8 @@ describe('Books API (e2e)', () => {
         })
         .expect(201);
 
-      const authorToDeleteId = createAuthorResponse.body.id;
-      await request(app.getHttpServer())
+      const authorToDeleteId = (createAuthorResponse.body as { id: string }).id;
+      await request(getHttpServer(app))
         .delete(`/authors/${authorToDeleteId}`)
         .expect(204);
       const author = await authorModel.findById(authorToDeleteId).exec();
@@ -139,18 +150,36 @@ describe('Books API (e2e)', () => {
 
   afterAll(async () => {
     try {
+      // Close app first to terminate any open connections
       if (app) {
         await app.close();
       }
+
+      // Close Mongoose connection
       if (mongoConnection) {
         await mongoConnection.dropDatabase();
-        await mongoConnection.close();
+        await mongoConnection.close(true); // Force close
       }
+
+      // Stop MongoDB memory server
       if (mongoMemoryServer) {
-        await mongoMemoryServer.stop();
+        await mongoMemoryServer.stop({ doCleanup: true });
       }
+
+      // Close any remaining Mongoose connections
+      // Import mongoose at the top of the file instead of using require
+      // This is just a safety measure to ensure all connections are closed
+      const mongoose = await import('mongoose');
+      await Promise.all(
+        Object.values(mongoose.connections).map((connection) => {
+          return connection.close();
+        }),
+      );
     } catch (error) {
-      console.error('Error in test cleanup:', error);
+      console.error(
+        'Error in test cleanup:',
+        error instanceof Error ? error.message : String(error),
+      );
     }
   });
 
@@ -160,10 +189,11 @@ describe('Books API (e2e)', () => {
       const collections = mongoConnection.collections;
       for (const key in collections) {
         const collection = collections[key];
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-call
         await collection.deleteMany({});
       }
 
-      const createAuthorResponse = await request(app.getHttpServer())
+      const createAuthorResponse = await request(getHttpServer(app))
         .post('/authors')
         .send({
           firstName: 'Test',
@@ -171,9 +201,12 @@ describe('Books API (e2e)', () => {
           bio: 'Author for testing books',
         });
 
-      authorId = createAuthorResponse.body.id;
+      authorId = (createAuthorResponse.body as { id: string }).id;
     } catch (error) {
-      console.error('Error clearing database:', error);
+      console.error(
+        'Error clearing database:',
+        error instanceof Error ? error.message : String(error),
+      );
       throw error;
     }
   });
@@ -187,7 +220,7 @@ describe('Books API (e2e)', () => {
         author: authorId,
       };
 
-      const response = await request(app.getHttpServer())
+      const response = await request(getHttpServer(app))
         .post('/books')
         .send(createBookDto)
         .expect(201);
@@ -208,7 +241,7 @@ describe('Books API (e2e)', () => {
         author: authorId,
       };
 
-      const response = await request(app.getHttpServer())
+      const response = await request(getHttpServer(app))
         .post('/books')
         .send(createBookDto)
         .expect(201);
@@ -232,7 +265,7 @@ describe('Books API (e2e)', () => {
         author: 'invalid-author-id',
       };
 
-      await request(app.getHttpServer())
+      await request(getHttpServer(app))
         .post('/books')
         .send(createBookDto)
         .expect(400);
@@ -248,7 +281,7 @@ describe('Books API (e2e)', () => {
         author: authorId,
       };
 
-      await request(app.getHttpServer())
+      await request(getHttpServer(app))
         .post('/books')
         .send(createBookDto)
         .expect(400);
@@ -264,14 +297,14 @@ describe('Books API (e2e)', () => {
         author: authorId,
       };
 
-      const response = await request(app.getHttpServer())
+      const response = await request(getHttpServer(app))
         .post('/books')
         .send(createBookDto)
         .expect(400);
-      const responseMessage = response.body.message;
-      const errorMessages = Array.isArray(responseMessage)
-        ? (responseMessage as string[])
-        : [responseMessage as string];
+      const responseBody = response.body as { message: string | string[] };
+      const errorMessages = Array.isArray(responseBody.message)
+        ? responseBody.message
+        : [responseBody.message];
       const hasExpectedError = errorMessages.some((msg: string) =>
         msg.includes('Genre must be one of the following'),
       );
@@ -298,7 +331,7 @@ describe('Books API (e2e)', () => {
     });
 
     it('should return all books with pagination', async () => {
-      const response = await request(app.getHttpServer())
+      const response = await request(getHttpServer(app))
         .get('/books')
         .expect(200);
 
@@ -312,7 +345,7 @@ describe('Books API (e2e)', () => {
     });
 
     it('should filter books by title', async () => {
-      const response = await request(app.getHttpServer())
+      const response = await request(getHttpServer(app))
         .get('/books?title=First')
         .expect(200);
 
@@ -324,15 +357,15 @@ describe('Books API (e2e)', () => {
     });
 
     it('should filter books by ISBN', async () => {
-      const response = await request(app.getHttpServer())
+      const response = await request(getHttpServer(app))
         .get('/books?isbn=978-0-7475-3269-9')
         .expect(200);
 
       const responseBody = response.body as PaginatedResponse<BookResponse>;
-      expect(responseBody).toHaveProperty('data');
-      expect(responseBody.data).toBeInstanceOf(Array);
-      expect(responseBody.data).toHaveLength(1);
-      expect(responseBody.data[0].isbn).toBe('978-0-7475-3269-9');
+      const { data: books } = responseBody;
+      expect(books).toBeInstanceOf(Array);
+      expect(books.length).toBe(1);
+      expect(books[0].isbn).toBe('978-0-7475-3269-9');
     });
   });
 });
