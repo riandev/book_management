@@ -1,98 +1,130 @@
+# Book Management System
+
 <p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
+  <img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" />
 </p>
-
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
-
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
 
 ## Description
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+The Book Management System is a RESTful API built with NestJS that allows for managing books and their authors. This system provides a comprehensive solution for creating, reading, updating, and deleting books and authors, with support for pagination, filtering, and searching.
 
-## Project setup
+## Features
+
+- **Author Management**: Create, read, update, and delete authors
+- **Book Management**: Create, read, update, and delete books with author relationships
+- **Data Validation**: Comprehensive validation using class-validator
+- **Error Handling**: Custom exception filters for consistent error responses
+- **Pagination**: Support for paginated results
+- **Search & Filter**: Search by title, author name, ISBN, and more
+- **Auto-generation**: ISBN auto-generation when not provided
+- **Testing**: Comprehensive unit and e2e tests
+
+## Technology Stack
+
+- **Framework**: NestJS
+- **Language**: TypeScript
+- **Database**: MongoDB with Mongoose ODM
+- **Validation**: class-validator and class-transformer
+- **Testing**: Jest and Supertest
+
+## Why MongoDB?
+
+MongoDB was chosen for this project for several key reasons:
+
+1. **Schema Flexibility**: MongoDB's document-based structure allows for flexible schemas, which is beneficial for a book management system where different books might have varying attributes.
+
+2. **Relational Data Handling**: While MongoDB is a NoSQL database, it provides excellent support for handling relational data through references, population and aggregation, which is perfect for the author-book relationship in this system.
+
+3. **Query Performance**: MongoDB's indexing capabilities provide fast query performance for operations like searching books by title or filtering authors.
+
+4. **Scalability**: MongoDB's horizontal scaling capabilities make it suitable for applications that might need to grow over time.
+
+5. **JSON-Like Documents**: The BSON format used by MongoDB aligns well with the JSON structure commonly used in REST APIs, making data transformation more straightforward.
+
+6. **Integration with NestJS**: NestJS provides excellent support for MongoDB through the @nestjs/mongoose package, making integration seamless.
+
+## Project Structure
+
+```
+src/
+├── authors/                 # Authors module
+│   ├── dto/                 # Data Transfer Objects
+│   ├── schemas/             # Mongoose schemas
+│   ├── authors.controller.ts
+│   ├── authors.module.ts
+│   └── authors.service.ts
+├── books/                   # Books module
+│   ├── dto/                 # Data Transfer Objects
+│   ├── schemas/             # Mongoose schemas
+│   ├── books.controller.ts
+│   ├── books.module.ts
+│   └── books.service.ts
+├── common/                  # Shared resources
+│   ├── filters/             # Exception filters
+│   └── utils/               # Utility functions
+├── config/                  # Configuration
+├── app.module.ts           # Main application module
+└── main.ts                 # Application entry point
+```
+
+## API Endpoints
+
+### Authors
+
+- `POST /authors`: Create a new author
+- `GET /authors`: Get a list of all authors (with pagination and search)
+- `GET /authors/:id`: Get a single author by ID
+- `PATCH /authors/:id`: Update an existing author
+- `DELETE /authors/:id`: Delete an author
+
+### Books
+
+- `POST /books`: Create a new book
+- `GET /books`: Get a list of all books (with pagination, search, and filtering)
+- `GET /books/:id`: Get a single book by ID
+- `PATCH /books/:id`: Update an existing book
+- `DELETE /books/:id`: Delete a book
+
+## Installation
 
 ```bash
+# Clone the repository
+$ git clone https://github.com/riandev/book_management.git
+
+# Install dependencies
 $ npm install
 ```
 
-## Compile and run the project
+## Configuration
+
+Rename the `.env.example` file to `.env` in the root directory or create a new `.env` file with the following variables:
+
+```
+MONGODB_URI=mongodb://localhost:27017/book_management
+```
+
+## Running the Application
 
 ```bash
-# development
+# Development mode
 $ npm run start
 
-# watch mode
+# Watch mode
 $ npm run start:dev
 
-# production mode
+# Production mode
 $ npm run start:prod
 ```
 
-## Run tests
+## Testing
 
 ```bash
-# unit tests
+# Unit tests
 $ npm run test
 
-# e2e tests
+# End-to-end tests
 $ npm run test:e2e
 
-# test coverage
+# Test coverage
 $ npm run test:cov
 ```
-
-## Deployment
-
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
-
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
-
-```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
-```
-
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
-
-## Resources
-
-Check out a few resources that may come in handy when working with NestJS:
-
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
-
-## Support
-
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
