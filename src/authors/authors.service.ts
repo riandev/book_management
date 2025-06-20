@@ -1,14 +1,21 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
+import { Book, BookDocument } from '../books/schemas/book.schema';
 import { CreateAuthorDto } from './dto/create-author.dto';
 import { UpdateAuthorDto } from './dto/update-author.dto';
 import { Author, AuthorDocument } from './schemas/author.schema';
 
 @Injectable()
 export class AuthorsService {
+  private readonly bookType: typeof Book = Book;
   constructor(
     @InjectModel(Author.name) private authorModel: Model<AuthorDocument>,
+    @InjectModel(Book.name) private bookModel: Model<BookDocument>,
   ) {}
 
   async create(createAuthorDto: CreateAuthorDto): Promise<Author> {
@@ -67,10 +74,18 @@ export class AuthorsService {
   }
 
   async remove(id: string): Promise<void> {
-    const result = await this.authorModel.findByIdAndDelete(id).exec();
-
-    if (!result) {
+    const author = await this.authorModel.findById(id).exec();
+    if (!author) {
       throw new NotFoundException(`Author with ID ${id} not found`);
     }
+    const booksCount = await this.bookModel
+      .countDocuments({ author: id })
+      .exec();
+    if (booksCount > 0) {
+      throw new BadRequestException(
+        `Cannot delete author with ID ${id} because they have ${booksCount} associated books. Delete the books first or reassign them to another author.`,
+      );
+    }
+    await this.authorModel.findByIdAndDelete(id).exec();
   }
 }

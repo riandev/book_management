@@ -5,25 +5,36 @@ import { Model } from 'mongoose';
 import { Author, AuthorDocument } from '../authors/schemas/author.schema';
 import * as isbnUtils from '../common/utils/isbn.utils';
 import { BooksService } from './books.service';
-import { CreateBookDto } from './dto/create-book.dto';
+import { BookGenre, CreateBookDto } from './dto/create-book.dto';
 import { UpdateBookDto } from './dto/update-book.dto';
 import { Book, BookDocument } from './schemas/book.schema';
 
 describe('BooksService', () => {
   let service: BooksService;
-  let bookModel: Model<BookDocument>;
+  let bookModel: any;
   let authorModel: Model<AuthorDocument>;
+  class MockBookModel {
+    isbn: string;
+    title: string;
+    author: string;
+    genre: BookGenre;
 
-  const mockBookModel = {
-    find: jest.fn(),
-    findById: jest.fn(),
-    findByIdAndUpdate: jest.fn(),
-    findByIdAndDelete: jest.fn(),
-    countDocuments: jest.fn(),
-    prototype: {
-      save: jest.fn(),
-    },
-  };
+    constructor(data: any) {
+      Object.assign(this, data);
+    }
+
+    save = jest.fn().mockImplementation(() => Promise.resolve(this));
+    populate = jest.fn().mockReturnThis();
+
+    static find = jest.fn().mockReturnThis();
+    static findById = jest.fn().mockReturnThis();
+    static findByIdAndUpdate = jest.fn().mockReturnThis();
+    static findByIdAndDelete = jest.fn().mockReturnThis();
+    static countDocuments = jest.fn().mockReturnThis();
+    static exec = jest.fn();
+  }
+
+  const mockBookModel = MockBookModel as unknown as Model<BookDocument>;
 
   const mockAuthorModel = {
     findById: jest.fn(),
@@ -42,7 +53,7 @@ describe('BooksService', () => {
     title: 'Test Book',
     isbn: '978-3-16-148410-0',
     publishedDate: new Date(),
-    genre: 'Fiction',
+    genre: BookGenre.FANTASY,
     author: mockAuthor,
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -53,13 +64,13 @@ describe('BooksService', () => {
     title: 'Test Book',
     isbn: '1234567890123',
     publishedDate: '2023-01-01',
-    genre: 'Fiction',
+    genre: BookGenre.FANTASY,
     author: 'author-id',
   };
 
   const mockUpdateBookDto: UpdateBookDto = {
     title: 'Updated Book',
-    genre: 'Non-Fiction',
+    genre: BookGenre.HISTORY,
   };
 
   beforeEach(async () => {
@@ -84,6 +95,7 @@ describe('BooksService', () => {
 
   afterEach(() => {
     jest.clearAllMocks();
+    jest.restoreAllMocks();
   });
 
   it('should be defined', () => {
@@ -102,37 +114,28 @@ describe('BooksService', () => {
     });
 
     it('should auto-generate ISBN if not provided', async () => {
+      // Mock the generateISBN function
       const generateISBNSpy = jest
         .spyOn(isbnUtils, 'generateISBN')
-        .mockReturnValue('978-1-2345-6789-0');
-
-      const createSpy = jest.spyOn(service, 'create');
-      createSpy.mockImplementation(async (createBookDto: CreateBookDto) => {
-        if (!createBookDto.isbn) {
-          createBookDto.isbn = isbnUtils.generateISBN();
-        }
-        return {
-          ...mockBook,
-          ...createBookDto,
-          populate: jest.fn().mockReturnThis(),
-        } as any;
-      });
-
-      const bookDtoWithoutIsbn: Partial<CreateBookDto> = {
+        .mockReturnValue('9781234567897');
+      jest.spyOn(authorModel, 'findById').mockReturnValue({
+        exec: jest.fn().mockResolvedValue({
+          _id: 'author-id',
+          firstName: 'Test',
+          lastName: 'Author',
+        }),
+      } as any);
+      const bookDtoWithoutIsbn: CreateBookDto = {
         title: 'Test Book',
         author: 'author-id',
+        genre: BookGenre.FANTASY,
       };
 
-      const result = await service.create(bookDtoWithoutIsbn as CreateBookDto);
+      const result = await service.create(bookDtoWithoutIsbn);
 
       expect(result.isbn).toBeDefined();
-      expect(result.isbn).toBe('978-1-2345-6789-0');
+      expect(result.isbn).toBe('9781234567897');
       expect(generateISBNSpy).toHaveBeenCalled();
-
-      generateISBNSpy.mockRestore();
-      createSpy.mockRestore();
-      generateISBNSpy.mockRestore();
-      createSpy.mockRestore();
     });
 
     it('should throw BadRequestException if author not found', async () => {

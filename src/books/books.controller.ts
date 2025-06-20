@@ -30,8 +30,18 @@ export class BooksController {
     @Query('title') title?: string,
     @Query('isbn') isbn?: string,
     @Query('author') author?: string,
+    @Query('genre') genre?: string,
+    @Query('publishedDate') publishedDate?: string,
   ) {
-    return this.booksService.findAll({ page, limit, title, isbn, author });
+    return this.booksService.findAll({
+      page,
+      limit,
+      title,
+      isbn,
+      author,
+      genre,
+      publishedDate,
+    });
   }
 
   @Get(':id')

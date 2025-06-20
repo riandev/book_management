@@ -154,7 +154,6 @@ describe('Authors API (e2e)', () => {
 
       const responseBody = response.body as { message: string | string[] };
       expect(responseBody).toHaveProperty('message');
-
       if (Array.isArray(responseBody.message)) {
         expect(
           responseBody.message.some((msg) => msg.includes('firstName')),
@@ -182,7 +181,6 @@ describe('Authors API (e2e)', () => {
 
       const responseBody = response.body as { message: string | string[] };
       expect(responseBody).toHaveProperty('message');
-
       const authors = await authorModel.find().exec();
       expect(authors).toHaveLength(0);
     });

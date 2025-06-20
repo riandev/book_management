@@ -1,11 +1,27 @@
 import {
   IsDateString,
+  IsEnum,
   IsISBN,
   IsMongoId,
   IsNotEmpty,
   IsOptional,
   IsString,
 } from 'class-validator';
+
+export enum BookGenre {
+  FANTASY = 'Fantasy',
+  SCIENCE_FICTION = 'Science Fiction',
+  THRILLER = 'Thriller',
+  ROMANCE = 'Romance',
+  MYSTERY = 'Mystery',
+  HORROR = 'Horror',
+  BIOGRAPHY = 'Biography',
+  HISTORY = 'History',
+  CHILDREN = 'Children',
+  YOUNG_ADULT = 'Young Adult',
+  COMIC = 'Comic',
+  OTHER = 'Other',
+}
 
 export class CreateBookDto {
   @IsNotEmpty()
@@ -21,8 +37,12 @@ export class CreateBookDto {
   publishedDate?: string;
 
   @IsOptional()
-  @IsString()
-  genre?: string;
+  @IsEnum(BookGenre, {
+    message:
+      'Genre must be one of the following: ' +
+      Object.values(BookGenre).join(', '),
+  })
+  genre?: BookGenre;
 
   @IsNotEmpty()
   @IsMongoId()

@@ -8,6 +8,7 @@ import * as request from 'supertest';
 import { AuthorsModule } from '../src/authors/authors.module';
 import { Author } from '../src/authors/schemas/author.schema';
 import { BooksModule } from '../src/books/books.module';
+import { BookGenre } from '../src/books/dto/create-book.dto';
 import { Book } from '../src/books/schemas/book.schema';
 import { HttpExceptionFilter } from '../src/common/filters/http-exception.filter';
 
@@ -93,6 +94,49 @@ describe('Books API (e2e)', () => {
     }
   });
 
+  describe('/authors/:id (DELETE)', () => {
+    it('should not allow deletion of an author with books', async () => {
+      const createBookDto = {
+        title: 'Book for Author Deletion Test',
+        genre: BookGenre.MYSTERY,
+        author: authorId,
+      };
+
+      await request(app.getHttpServer())
+        .post('/books')
+        .send(createBookDto)
+        .expect(201);
+
+      const response = await request(app.getHttpServer())
+        .delete(`/authors/${authorId}`)
+        .expect(400);
+
+      expect(response.body.message).toContain('Cannot delete author');
+      expect(response.body.message).toContain('associated books');
+
+      const author = await authorModel.findById(authorId).exec();
+      expect(author).toBeTruthy();
+    });
+
+    it('should allow deletion of an author with no books', async () => {
+      const createAuthorResponse = await request(app.getHttpServer())
+        .post('/authors')
+        .send({
+          firstName: 'Author',
+          lastName: 'ToDelete',
+          bio: 'Will be deleted',
+        })
+        .expect(201);
+
+      const authorToDeleteId = createAuthorResponse.body.id;
+      await request(app.getHttpServer())
+        .delete(`/authors/${authorToDeleteId}`)
+        .expect(204);
+      const author = await authorModel.findById(authorToDeleteId).exec();
+      expect(author).toBeNull();
+    });
+  });
+
   afterAll(async () => {
     try {
       if (app) {
@@ -139,6 +183,7 @@ describe('Books API (e2e)', () => {
       const createBookDto = {
         title: 'Test Book',
         isbn: '978-3-16-148410-0',
+        genre: BookGenre.FANTASY,
         author: authorId,
       };
 
@@ -198,6 +243,7 @@ describe('Books API (e2e)', () => {
     it('should return 400 if provided ISBN is invalid', async () => {
       const createBookDto = {
         title: 'Test Book',
+        genre: BookGenre.FANTASY,
         isbn: 'invalid-isbn',
         author: authorId,
       };
@@ -206,6 +252,30 @@ describe('Books API (e2e)', () => {
         .post('/books')
         .send(createBookDto)
         .expect(400);
+      const books = await bookModel.find().exec();
+      expect(books).toHaveLength(0);
+    });
+
+    it('should return 400 if genre is invalid', async () => {
+      const createBookDto = {
+        title: 'Test Book with Invalid Genre',
+        isbn: '978-3-16-148410-0',
+        genre: 'InvalidGenre',
+        author: authorId,
+      };
+
+      const response = await request(app.getHttpServer())
+        .post('/books')
+        .send(createBookDto)
+        .expect(400);
+      const responseMessage = response.body.message;
+      const errorMessages = Array.isArray(responseMessage)
+        ? (responseMessage as string[])
+        : [responseMessage as string];
+      const hasExpectedError = errorMessages.some((msg: string) =>
+        msg.includes('Genre must be one of the following'),
+      );
+      expect(hasExpectedError).toBe(true);
       const books = await bookModel.find().exec();
       expect(books).toHaveLength(0);
     });

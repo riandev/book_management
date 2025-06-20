@@ -1,6 +1,7 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Schema as MongooseSchema } from 'mongoose';
 import { Author } from '../../authors/schemas/author.schema';
+import { BookGenre } from '../dto/create-book.dto';
 
 export type BookDocument = Book & Document;
 
@@ -25,8 +26,8 @@ export class Book {
   @Prop({ type: Date })
   publishedDate?: Date;
 
-  @Prop()
-  genre?: string;
+  @Prop({ type: String, enum: Object.values(BookGenre) })
+  genre?: BookGenre;
 
   @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Author', required: true })
   author: Author;

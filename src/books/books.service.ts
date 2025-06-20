@@ -42,10 +42,21 @@ export class BooksService {
     title?: string;
     isbn?: string;
     author?: string;
+    genre?: string;
+    publishedDate?: string;
   }): Promise<{ data: Book[]; total: number; page: number; limit: number }> {
-    const { page = 1, limit = 10, title, isbn, author } = query;
+    const {
+      page = 1,
+      limit = 10,
+      title,
+      isbn,
+      author,
+      genre,
+      publishedDate,
+    } = query;
     const skip = (page - 1) * limit;
-    const filter: any = {};
+    const filter: Record<string, unknown> = {};
+
     if (title) {
       filter.title = { $regex: title, $options: 'i' };
     }
@@ -54,6 +65,21 @@ export class BooksService {
     }
     if (author) {
       filter.author = author;
+    }
+    if (genre) {
+      filter.genre = { $regex: genre, $options: 'i' };
+    }
+    if (publishedDate) {
+      const dateObj = new Date(publishedDate);
+      if (!isNaN(dateObj.getTime())) {
+        const nextDay = new Date(dateObj);
+        nextDay.setDate(nextDay.getDate() + 1);
+
+        filter.publishedDate = {
+          $gte: dateObj,
+          $lt: nextDay,
+        };
+      }
     }
 
     const [data, total] = await Promise.all([

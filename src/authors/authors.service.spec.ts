@@ -1,7 +1,8 @@
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { getModelToken } from '@nestjs/mongoose';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Model } from 'mongoose';
+import { Book } from '../books/schemas/book.schema';
 import { AuthorsService } from './authors.service';
 import { Author } from './schemas/author.schema';
 
@@ -26,14 +27,20 @@ describe('AuthorsService', () => {
   let service: AuthorsService;
   let model: Model<Author>;
   const mockAuthorModel = {
-    find: jest.fn(),
-    findById: jest.fn(),
-    findByIdAndUpdate: jest.fn(),
-    findByIdAndDelete: jest.fn(),
-    countDocuments: jest.fn(),
+    find: jest.fn().mockReturnThis(),
+    findById: jest.fn().mockReturnThis(),
+    findByIdAndUpdate: jest.fn().mockReturnThis(),
+    findByIdAndDelete: jest.fn().mockReturnThis(),
+    countDocuments: jest.fn().mockReturnThis(),
+    exec: jest.fn(),
     prototype: {
       save: jest.fn(),
     },
+  };
+
+  const mockBookModel = {
+    find: jest.fn(),
+    countDocuments: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -43,6 +50,10 @@ describe('AuthorsService', () => {
         {
           provide: getModelToken(Author.name),
           useValue: mockAuthorModel,
+        },
+        {
+          provide: getModelToken(Book.name),
+          useValue: mockBookModel,
         },
       ],
     }).compile();
@@ -171,9 +182,20 @@ describe('AuthorsService', () => {
   });
 
   describe('remove', () => {
+    beforeEach(() => {
+      jest.clearAllMocks();
+    });
     it('should remove an author', async () => {
-      jest.spyOn(mockAuthorModel, 'findByIdAndDelete').mockReturnValueOnce({
-        exec: jest.fn().mockResolvedValueOnce(mockAuthor),
+      jest.spyOn(mockAuthorModel, 'findById').mockReturnValue({
+        exec: jest.fn().mockResolvedValue(mockAuthor),
+      } as any);
+
+      jest.spyOn(mockBookModel, 'countDocuments').mockReturnValue({
+        exec: jest.fn().mockResolvedValue(0),
+      } as any);
+
+      jest.spyOn(mockAuthorModel, 'findByIdAndDelete').mockReturnValue({
+        exec: jest.fn().mockResolvedValue(mockAuthor),
       } as any);
 
       await service.remove('5f9d5c9b9d9b9d9b9d9b9d9b');
@@ -184,13 +206,27 @@ describe('AuthorsService', () => {
     });
 
     it('should throw NotFoundException if author to remove not found', async () => {
-      jest.spyOn(mockAuthorModel, 'findByIdAndDelete').mockReturnValueOnce({
-        exec: jest.fn().mockResolvedValueOnce(null),
+      jest.spyOn(mockAuthorModel, 'findById').mockReturnValue({
+        exec: jest.fn().mockResolvedValue(null),
       } as any);
 
       await expect(service.remove('nonexistentid')).rejects.toThrow(
         NotFoundException,
       );
+    });
+
+    it('should throw BadRequestException if author has associated books', async () => {
+      jest.spyOn(mockAuthorModel, 'findById').mockReturnValue({
+        exec: jest.fn().mockResolvedValue(mockAuthor),
+      } as any);
+      jest.spyOn(mockBookModel, 'countDocuments').mockReturnValue({
+        exec: jest.fn().mockResolvedValue(2),
+      } as any);
+
+      await expect(service.remove('author-with-books')).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(mockAuthorModel.findByIdAndDelete).not.toHaveBeenCalled();
     });
   });
 });
